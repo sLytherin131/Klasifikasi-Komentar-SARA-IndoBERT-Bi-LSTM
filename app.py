@@ -15,7 +15,10 @@ st.markdown("Model yang digunakan: **IndoBERT Base** dan **BiLSTM**")
 def load_indobert_base():
     model_name = "Ricky131/indobert-base-sara-detector"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    model = AutoModelForSequenceClassification.from_pretrained(
+        model_name,
+        use_safetensors=False  # ⛔️ wajib untuk load model .bin
+    )
     model.eval()
     return tokenizer, model
 
@@ -29,7 +32,6 @@ def load_bilstm_model():
     model_path = "bilstm_temp/bilstm_model.pth"
     vocab_path = "bilstm_temp/vocab.pkl"
 
-    # Download model & vocab
     if not os.path.exists(model_path):
         with open(model_path, "wb") as f:
             f.write(requests.get(model_url).content)
@@ -37,11 +39,9 @@ def load_bilstm_model():
         with open(vocab_path, "wb") as f:
             f.write(requests.get(vocab_url).content)
 
-    # Load vocab
     with open(vocab_path, 'rb') as f:
         vocab = pickle.load(f)
 
-    # Define model
     class BiLSTMClassifier(nn.Module):
         def __init__(self, vocab_size, embed_dim=128, hidden_dim=128, output_dim=2):
             super(BiLSTMClassifier, self).__init__()
