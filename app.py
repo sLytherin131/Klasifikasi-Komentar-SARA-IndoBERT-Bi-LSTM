@@ -28,8 +28,8 @@ def load_indobert_base():
 @st.cache_resource
 def load_bilstm_model():
     # Download dari Hugging Face model dan vocab
-    model_path = hf_hub_download(repo_id="Ricky131/bilstm-sara-detector", filename="bilstm_model.pth")
-    vocab_path = hf_hub_download(repo_id="Ricky131/bilstm-sara-detector", filename="vocab.pkl")
+    model_path = hf_hub_download(repo_id="Ricky131/bilstm-sara-detector", filename="bilstm_model/bilstm_model.pth")
+    vocab_path = hf_hub_download(repo_id="Ricky131/bilstm-sara-detector", filename="bilstm_model/vocab.pkl")
 
     with open(vocab_path, 'rb') as f:
         vocab = pickle.load(f)
