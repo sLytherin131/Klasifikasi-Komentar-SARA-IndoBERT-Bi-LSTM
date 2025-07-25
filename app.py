@@ -68,10 +68,8 @@ def predict_indobert_base(text, tokenizer, model):
     return pred, confidence
 
 def predict_bilstm(text, vocab, model):
-    nltk.download('punkt', quiet=True)
-    tokens = word_tokenize(text)
-
     max_len = 100
+    tokens = text.lower().split()  # Ganti word_tokenize dengan split biasa
     encoded = [vocab.get(word, vocab.get('<UNK>', 1)) for word in tokens]
     if len(encoded) < max_len:
         encoded += [vocab.get('<PAD>', 0)] * (max_len - len(encoded))
