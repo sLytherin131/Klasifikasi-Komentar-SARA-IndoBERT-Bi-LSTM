@@ -2,9 +2,11 @@ import streamlit as st
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch.nn as nn
-import requests
+import nltk
 import pickle
 import os
+from nltk.tokenize import word_tokenize
+from huggingface_hub import hf_hub_download
 
 st.set_page_config(page_title="Deteksi Komentar SARA", layout="wide")
 st.title("🧠 Deteksi Komentar SARA")
@@ -17,7 +19,7 @@ def load_indobert_base():
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForSequenceClassification.from_pretrained(
         model_name,
-        use_safetensors=False  # ⛔️ wajib untuk load model .bin
+        use_safetensors=False  # Penting agar Streamlit tidak pakai .safetensors
     )
     model.eval()
     return tokenizer, model
@@ -25,19 +27,9 @@ def load_indobert_base():
 # === MODEL 2: BiLSTM ===
 @st.cache_resource
 def load_bilstm_model():
-    model_url = "https://huggingface.co/Ricky131/bilstm-sara-detector/resolve/main/bilstm_model.pth"
-    vocab_url = "https://huggingface.co/Ricky131/bilstm-sara-detector/resolve/main/vocab.pkl"
-
-    os.makedirs("bilstm_temp", exist_ok=True)
-    model_path = "bilstm_temp/bilstm_model.pth"
-    vocab_path = "bilstm_temp/vocab.pkl"
-
-    if not os.path.exists(model_path):
-        with open(model_path, "wb") as f:
-            f.write(requests.get(model_url).content)
-    if not os.path.exists(vocab_path):
-        with open(vocab_path, "wb") as f:
-            f.write(requests.get(vocab_url).content)
+    # Download dari Hugging Face model dan vocab
+    model_path = hf_hub_download(repo_id="Ricky131/bilstm-sara-detector", filename="bilstm_model.pth")
+    vocab_path = hf_hub_download(repo_id="Ricky131/bilstm-sara-detector", filename="vocab.pkl")
 
     with open(vocab_path, 'rb') as f:
         vocab = pickle.load(f)
@@ -76,12 +68,10 @@ def predict_indobert_base(text, tokenizer, model):
     return pred, confidence
 
 def predict_bilstm(text, vocab, model):
-    import nltk
     nltk.download('punkt', quiet=True)
-    from nltk.tokenize import word_tokenize
+    tokens = word_tokenize(text)
 
     max_len = 100
-    tokens = word_tokenize(text)
     encoded = [vocab.get(word, vocab.get('<UNK>', 1)) for word in tokens]
     if len(encoded) < max_len:
         encoded += [vocab.get('<PAD>', 0)] * (max_len - len(encoded))
@@ -104,13 +94,19 @@ with col1:
     tokenizer_base, model_base = load_indobert_base()
     input_text1 = st.text_area("Masukkan komentar untuk IndoBERT Base", key="input1")
     if st.button("Deteksi dengan IndoBERT Base"):
-        label, conf = predict_indobert_base(input_text1, tokenizer_base, model_base)
-        st.success(f"Prediksi: {'SARA' if label==1 else 'TIDAK SARA'} (Confidence: {conf:.2f})")
+        if input_text1.strip():
+            label, conf = predict_indobert_base(input_text1, tokenizer_base, model_base)
+            st.success(f"Prediksi: {'SARA' if label==1 else 'TIDAK SARA'} (Confidence: {conf:.2f})")
+        else:
+            st.warning("Masukkan komentar terlebih dahulu.")
 
 with col2:
     st.subheader("🔵 BiLSTM")
     vocab_bilstm, model_bilstm = load_bilstm_model()
     input_text2 = st.text_area("Masukkan komentar untuk BiLSTM", key="input2")
     if st.button("Deteksi dengan BiLSTM"):
-        label, conf = predict_bilstm(input_text2, vocab_bilstm, model_bilstm)
-        st.success(f"Prediksi: {'SARA' if label==1 else 'TIDAK SARA'} (Confidence: {conf:.2f})")
+        if input_text2.strip():
+            label, conf = predict_bilstm(input_text2, vocab_bilstm, model_bilstm)
+            st.success(f"Prediksi: {'SARA' if label==1 else 'TIDAK SARA'} (Confidence: {conf:.2f})")
+        else:
+            st.warning("Masukkan komentar terlebih dahulu.")
