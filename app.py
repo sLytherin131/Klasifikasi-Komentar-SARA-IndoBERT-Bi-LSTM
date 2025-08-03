@@ -8,8 +8,7 @@ from huggingface_hub import hf_hub_download
 st.set_page_config(page_title="Deteksi Komentar SARA", layout="wide")
 st.title("🧠 Deteksi Komentar SARA")
 st.markdown("""
-**SARA** adalah singkatan dari *Suku, Agama, Ras, dan Antargolongan*,  
-yang merupakan konten sensitif yang dapat menimbulkan konflik sosial dan diskriminasi.
+**SARA** adalah singkatan dari *Suku, Agama, Ras, dan Antargolongan*, yang merupakan konten sensitif yang dapat menimbulkan konflik sosial dan diskriminasi. 
 Model yang digunakan: **IndoBERT Base**, **IndoBERT Large Optimized v2**, dan **BiLSTM** 
 """)
 
@@ -124,4 +123,5 @@ if input_text.strip():
             st.info(f"🔵 BiLSTM: **{'SARA' if label==1 else 'TIDAK SARA'}** (Confidence: {conf:.2f})")
 else:
     st.warning("Masukkan komentar terlebih dahulu untuk dideteksi.")
+
 
