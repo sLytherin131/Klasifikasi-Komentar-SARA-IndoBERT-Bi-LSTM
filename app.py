@@ -2,35 +2,36 @@ import streamlit as st
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch.nn as nn
-import nltk
 import pickle
-import os
-from nltk.tokenize import word_tokenize
 from huggingface_hub import hf_hub_download
 
 st.set_page_config(page_title="Deteksi Komentar SARA", layout="wide")
 st.title("🧠 Deteksi Komentar SARA")
-st.markdown("Model yang digunakan: **IndoBERT Base** dan **BiLSTM**")
+st.markdown("Model yang digunakan: **IndoBERT Base**, **IndoBERT Large Optimized v2**, dan **BiLSTM**")
 
 # === MODEL 1: IndoBERT BASE ===
 @st.cache_resource
 def load_indobert_base():
     model_name = "Ricky131/indobert-base-sara-detector"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSequenceClassification.from_pretrained(
-        model_name,
-        use_safetensors=False  # Penting agar Streamlit tidak pakai .safetensors
-    )
+    model = AutoModelForSequenceClassification.from_pretrained(model_name, use_safetensors=False)
     model.eval()
     return tokenizer, model
 
-# === MODEL 2: BiLSTM ===
+# === MODEL 2: IndoBERT LARGE OPTIMIZED ===
+@st.cache_resource
+def load_indobert_large():
+    model_name = "Ricky131/indobert-large-optimized-v2"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name, use_safetensors=False)
+    model.eval()
+    return tokenizer, model
+
+# === MODEL 3: BiLSTM ===
 @st.cache_resource
 def load_bilstm_model():
-    # Download dari Hugging Face model dan vocab
     model_path = hf_hub_download(repo_id="Ricky131/bilstm-sara-detector", filename="bilstm_model/bilstm_model.pth")
     vocab_path = hf_hub_download(repo_id="Ricky131/bilstm-sara-detector", filename="bilstm_model/vocab.pkl")
-
     with open(vocab_path, 'rb') as f:
         vocab = pickle.load(f)
 
@@ -67,15 +68,23 @@ def predict_indobert_base(text, tokenizer, model):
         confidence = probs[0][pred].item()
     return pred, confidence
 
+def predict_indobert_large(text, tokenizer, model):
+    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=128)
+    with torch.no_grad():
+        outputs = model(**inputs)
+        probs = torch.softmax(outputs.logits, dim=1)
+        pred = torch.argmax(probs).item()
+        confidence = probs[0][pred].item()
+    return pred, confidence
+
 def predict_bilstm(text, vocab, model):
     max_len = 100
-    tokens = text.lower().split()  # Ganti word_tokenize dengan split biasa
+    tokens = text.lower().split()
     encoded = [vocab.get(word, vocab.get('<UNK>', 1)) for word in tokens]
     if len(encoded) < max_len:
         encoded += [vocab.get('<PAD>', 0)] * (max_len - len(encoded))
     else:
         encoded = encoded[:max_len]
-
     input_tensor = torch.tensor([encoded], dtype=torch.long)
     with torch.no_grad():
         outputs = model(input_tensor)
@@ -85,8 +94,9 @@ def predict_bilstm(text, vocab, model):
     return pred, confidence
 
 # === UI ===
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
 
+# === INDO BERT BASE ===
 with col1:
     st.subheader("🟡 IndoBERT Base")
     tokenizer_base, model_base = load_indobert_base()
@@ -98,7 +108,20 @@ with col1:
         else:
             st.warning("Masukkan komentar terlebih dahulu.")
 
+# === INDO BERT LARGE OPTIMIZED ===
 with col2:
+    st.subheader("🟢 IndoBERT Large Optimized v2")
+    tokenizer_large, model_large = load_indobert_large()
+    input_text3 = st.text_area("Masukkan komentar untuk IndoBERT Large", key="input3")
+    if st.button("Deteksi dengan IndoBERT Large"):
+        if input_text3.strip():
+            label, conf = predict_indobert_large(input_text3, tokenizer_large, model_large)
+            st.success(f"Prediksi: {'SARA' if label==1 else 'TIDAK SARA'} (Confidence: {conf:.2f})")
+        else:
+            st.warning("Masukkan komentar terlebih dahulu.")
+
+# === BILSTM ===
+with col3:
     st.subheader("🔵 BiLSTM")
     vocab_bilstm, model_bilstm = load_bilstm_model()
     input_text2 = st.text_area("Masukkan komentar untuk BiLSTM", key="input2")
