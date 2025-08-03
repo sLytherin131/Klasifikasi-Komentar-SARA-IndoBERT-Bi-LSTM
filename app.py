@@ -7,7 +7,11 @@ from huggingface_hub import hf_hub_download
 
 st.set_page_config(page_title="Deteksi Komentar SARA", layout="wide")
 st.title("🧠 Deteksi Komentar SARA")
-st.markdown("Model yang digunakan: **IndoBERT Base**, **IndoBERT Large Optimized v2**, dan **BiLSTM**")
+st.markdown("""
+Model yang digunakan: **IndoBERT Base**, **IndoBERT Large Optimized v2**, dan **BiLSTM**  
+**SARA** adalah singkatan dari *Suku, Agama, Ras, dan Antargolongan*,  
+yang merupakan konten sensitif yang dapat menimbulkan konflik sosial dan diskriminasi.
+""")
 
 # === MODEL 1: IndoBERT BASE ===
 @st.cache_resource
@@ -55,7 +59,6 @@ def load_bilstm_model():
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.to(device)
     model.eval()
-
     return vocab, model
 
 # === FUNGSI PREDIKSI ===
@@ -93,42 +96,31 @@ def predict_bilstm(text, vocab, model):
         confidence = probs[0][pred].item()
     return pred, confidence
 
-# === UI ===
-col1, col2, col3 = st.columns(3)
+# === MUAT MODEL ===
+tokenizer_base, model_base = load_indobert_base()
+tokenizer_large, model_large = load_indobert_large()
+vocab_bilstm, model_bilstm = load_bilstm_model()
 
-# === INDO BERT BASE ===
-with col1:
-    st.subheader("🟡 IndoBERT Base")
-    tokenizer_base, model_base = load_indobert_base()
-    input_text1 = st.text_area("Masukkan komentar untuk IndoBERT Base", key="input1")
-    if st.button("Deteksi dengan IndoBERT Base"):
-        if input_text1.strip():
-            label, conf = predict_indobert_base(input_text1, tokenizer_base, model_base)
-            st.success(f"Prediksi: {'SARA' if label==1 else 'TIDAK SARA'} (Confidence: {conf:.2f})")
-        else:
-            st.warning("Masukkan komentar terlebih dahulu.")
+# === INPUTAN TUNGGAL UNTUK KETIGA MODEL ===
+input_text = st.text_area("Masukkan komentar untuk dianalisis", key="input_text")
 
-# === INDO BERT LARGE OPTIMIZED ===
-with col2:
-    st.subheader("🟢 IndoBERT Large Optimized v2")
-    tokenizer_large, model_large = load_indobert_large()
-    input_text3 = st.text_area("Masukkan komentar untuk IndoBERT Large", key="input3")
-    if st.button("Deteksi dengan IndoBERT Large"):
-        if input_text3.strip():
-            label, conf = predict_indobert_large(input_text3, tokenizer_large, model_large)
-            st.success(f"Prediksi: {'SARA' if label==1 else 'TIDAK SARA'} (Confidence: {conf:.2f})")
-        else:
-            st.warning("Masukkan komentar terlebih dahulu.")
+# Status hasil prediksi
+if input_text.strip():
+    col1, col2, col3 = st.columns(3)
 
-# === BILSTM ===
-with col3:
-    st.subheader("🔵 BiLSTM")
-    vocab_bilstm, model_bilstm = load_bilstm_model()
-    input_text2 = st.text_area("Masukkan komentar untuk BiLSTM", key="input2")
-    if st.button("Deteksi dengan BiLSTM"):
-        if input_text2.strip():
-            label, conf = predict_bilstm(input_text2, vocab_bilstm, model_bilstm)
-            st.success(f"Prediksi: {'SARA' if label==1 else 'TIDAK SARA'} (Confidence: {conf:.2f})")
-        else:
-            st.warning("Masukkan komentar terlebih dahulu.")
+    with col1:
+        if st.button("Deteksi dengan IndoBERT Base"):
+            label, conf = predict_indobert_base(input_text, tokenizer_base, model_base)
+            st.info(f"🟡 IndoBERT Base: **{'SARA' if label==1 else 'TIDAK SARA'}** (Confidence: {conf:.2f})")
 
+    with col2:
+        if st.button("Deteksi dengan IndoBERT Large"):
+            label, conf = predict_indobert_large(input_text, tokenizer_large, model_large)
+            st.info(f"🟢 IndoBERT Large: **{'SARA' if label==1 else 'TIDAK SARA'}** (Confidence: {conf:.2f})")
+
+    with col3:
+        if st.button("Deteksi dengan BiLSTM"):
+            label, conf = predict_bilstm(input_text, vocab_bilstm, model_bilstm)
+            st.info(f"🔵 BiLSTM: **{'SARA' if label==1 else 'TIDAK SARA'}** (Confidence: {conf:.2f})")
+else:
+    st.warning("Masukkan komentar terlebih dahulu untuk dideteksi.")
