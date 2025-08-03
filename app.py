@@ -21,7 +21,7 @@ def load_indobert_base():
 # === MODEL 2: IndoBERT LARGE OPTIMIZED ===
 @st.cache_resource
 def load_indobert_large():
-    model_name = "Ricky131/indobert-large-optimized-v2"
+    model_name = "Ricky131/indobert-large-optimized-v2-new"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForSequenceClassification.from_pretrained(model_name, use_safetensors=False)
     model.eval()
@@ -131,3 +131,4 @@ with col3:
             st.success(f"Prediksi: {'SARA' if label==1 else 'TIDAK SARA'} (Confidence: {conf:.2f})")
         else:
             st.warning("Masukkan komentar terlebih dahulu.")
+
